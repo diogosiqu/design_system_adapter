@@ -1,0 +1,104 @@
+/* Declare any useful variable */
+
+
+$c-main: #4e4f55;
+$c-sec: #03e2f2;
+$c-terc:#f76375;
+$c-quart: #2c968f;
+$c-sec-dark: #111;
+$c-sec-line: #55d2ce;
+$c-black: #000;
+$c-black-1: #333333;
+$amarelo: #ffbf0b;
+$marron: #635544;
+$vermelho: #ef1818;
+$vermelho-1: #ee5050;
+$verde: #239389;
+$verde1: #5f9e00;
+$branco: #fff;
+$cinza: #313131;
+$cinza-1: #a1a1a1;
+$cinza-2: #f6f7f9;
+$cinza-3: #d6d6d6;
+$cinza-4: #ebebeb;
+$cinza-5: #b0afb5;
+$cinza-6: #676767;
+$cinza-7: #e1e1e1;
+$cinza-8: #5e5e5e;
+$cinza-9: #979797;
+$cinza-10: #ececec;
+
+// HEADER
+$bg-header: $branco;
+$header-text: $c-main;
+$bg-shopping-cart-number-header: #f0f0f0;
+
+$c-title-main: $c-terc;
+$c-text-main: $c-black;
+$c-span-title: $c-main;
+$c-link-user-menu: #fff;
+$c-btn-default: $c-terc;
+$c-btn-checkout: #fff;
+$c-title-discount: $c-main;
+$c-price-product: #000;
+$c-avaliable: $c-black;
+$c-unavaliable: $vermelho;
+$c-wishlist: $c-terc;
+
+$c-product-link: #9f9f9f;
+
+$c-edit-cart: $c-terc;
+$c-title-cart: $c-terc;
+$c-items-minicart: $c-terc;
+$c-delete-cart:#ee5050;
+$c-shipping-cart: #333;
+$c-stock-color: #666;
+
+$c-codsku: $c-sec;
+
+$c-price: $cinza-9;
+
+$c-sucess: #25c322;
+$c-review: #ee0000;
+
+$c-border-menu: $vermelho;
+$c-border-foto-thumb: $c-sec;
+$c-border-form: rgba(0,0,0,0.2);
+$c-border-default: $c-terc;
+
+$c-active: $c-sec;
+$c-nav-collapse: $c-terc;
+$bg-dots: $c-main;
+
+$c-progress-checkout: $c-terc;
+
+$c-pagination: $cinza;
+
+$bg-body: #f0f0f0;
+$bg-color-retire-loja: $c-main;
+$bg-color-btn-checkout: $verde1;
+$bg-btn-default-garra: $c-black;
+$bg-top-nav: $c-sec;
+$bg-tab-help: $c-main;
+$bg-access-class: $c-sec-dark;
+$bg-bt-action-search: $c-main;
+$bg-bt-main: $c-terc;
+$bg-footer: transparent;
+
+
+$c-fastorder-table: $cinza;
+$c-btn-fast-order: $c-quart;
+
+$v-border-radius: 12px;
+
+// #5F66D9
+
+// #76D94A
+
+/* PENSAR EM VARIAVEL DE CAMINHO:
+background-image: url('@{baseDir}Bss_FastOrder/images/icon.png');
+*/
+
+.customer-account-login .login-container .block.block-customer-login #block-customer-login-heading{
+    color: #25c322;
+}

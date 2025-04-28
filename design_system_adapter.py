@@ -6,6 +6,8 @@ from colormath.color_objects import sRGBColor, LabColor
 from colormath.color_conversions import convert_color
 from colormath.color_diff import delta_e_cie2000
 import colorsys
+import re
+import os
 
 class DesignSystemAdapter:
     def __init__(self, logo_path):
@@ -126,7 +128,158 @@ class DesignSystemAdapter:
             f.write(scss_content)
         
         print(f"Arquivo SCSS exportado com sucesso para {output_path}")
+        
+    def read_existing_scss(self, scss_path):
+        """Lê um arquivo SCSS existente e extrai as variáveis de cor"""
+        if not os.path.exists(scss_path):
+            print(f"Arquivo SCSS não encontrado: {scss_path}")
+            return {}
+            
+        with open(scss_path, "r") as f:
+            scss_content = f.read()
+            
+        # Padrão para identificar variáveis de cor em SCSS
+        # Procura por linhas como $color-primary: #ff0000;
+        color_pattern = re.compile(r'\$([\w-]+)\s*:\s*(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))\s*;')
+        
+        # Encontrar todas as variáveis de cor
+        color_variables = color_pattern.findall(scss_content)
+        
+        # Retorna um dicionário de variáveis de cor
+        return {name: value for name, value in color_variables}
     
+    def update_existing_scss(self, input_scss_path, output_scss_path=None):
+        """Atualiza um arquivo SCSS existente com as novas cores extraídas"""
+        if not os.path.exists(input_scss_path):
+            print(f"Arquivo SCSS de entrada não encontrado: {input_scss_path}")
+            return False
+            
+        if output_scss_path is None:
+            # Se não foi especificado um caminho de saída, cria um novo arquivo com sufixo
+            base_name, ext = os.path.splitext(input_scss_path)
+            output_scss_path = f"{base_name}_updated{ext}"
+            
+        # Gerar a paleta de cores, se ainda não foi gerada
+        if not self.color_palette:
+            self.generate_color_palette()
+            
+        # Ler o arquivo SCSS original
+        with open(input_scss_path, "r") as f:
+            original_scss = f.read()
+            
+        # Extrair variáveis existentes
+        existing_variables = self.read_existing_scss(input_scss_path)
+        
+        # Mapeamento inteligente de variáveis
+        # Esta função tenta mapear as cores extraídas para variáveis existentes
+        # com base em nomes e similaridade de cores
+        mapped_colors = self._map_colors_to_variables(existing_variables)
+        
+        # Substituir as cores no arquivo original
+        updated_scss = original_scss
+        for var_name, new_color in mapped_colors.items():
+            # Escape caracteres especiais no nome da variável para uso em regex
+            escaped_var_name = re.escape(var_name)
+            # Padrão para encontrar a variável e seu valor atual
+            pattern = re.compile(r'(\$' + escaped_var_name + r'\s*:\s*)(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))(\s*;)')
+            # Substituir o valor mantendo a estrutura
+            updated_scss = pattern.sub(r'\1' + new_color + r'\3', updated_scss)
+            
+        # Salvar o arquivo atualizado
+        with open(output_scss_path, "w") as f:
+            f.write(updated_scss)
+            
+        print(f"Arquivo SCSS atualizado salvo em: {output_scss_path}")
+        return True
+        
+    def _map_colors_to_variables(self, existing_variables):
+        """Mapeia as cores extraídas para variáveis existentes de forma inteligente"""
+        if not existing_variables:
+            return {}
+            
+        # Classificar variáveis existentes em categorias por nome
+        categories = {
+            'primary': [],
+            'secondary': [],
+            'accent': [],
+            'background': [],
+            'text': [],
+            'other': []
+        }
+        
+        for var_name in existing_variables.keys():
+            if 'primary' in var_name:
+                categories['primary'].append(var_name)
+            elif 'secondary' in var_name:
+                categories['secondary'].append(var_name)
+            elif 'accent' in var_name or 'highlight' in var_name:
+                categories['accent'].append(var_name)
+            elif 'background' in var_name or 'bg' in var_name:
+                categories['background'].append(var_name)
+            elif 'text' in var_name or 'font' in var_name:
+                categories['text'].append(var_name)
+            else:
+                categories['other'].append(var_name)
+                
+        # Mapeamento de resultado
+        mapped_colors = {}
+        
+        # Mapear cor primária
+        if 'primary' in self.color_palette and categories['primary']:
+            base_primary = categories['primary'][0]
+            mapped_colors[base_primary] = self.color_palette['primary']
+            
+            # Mapear variações de cor primária
+            variations = [var for var in categories['primary'] if var != base_primary]
+            for i, var in enumerate(variations):
+                if 'dark' in var and 'primary-dark' in self.color_palette:
+                    mapped_colors[var] = self.color_palette['primary-dark']
+                elif 'light' in var and 'primary-light' in self.color_palette:
+                    mapped_colors[var] = self.color_palette['primary-light']
+                elif i < len(self.dominant_colors) - 1:
+                    # Usar cores dominantes adicionais para variações
+                    mapped_colors[var] = self._rgb_to_hex(self.dominant_colors[i+1])
+                    
+        # Mapear cor secundária
+        if 'secondary' in self.color_palette and categories['secondary']:
+            for var in categories['secondary']:
+                mapped_colors[var] = self.color_palette['secondary']
+                
+        # Mapear cor de destaque/acento
+        if 'accent' in self.color_palette and categories['accent']:
+            for var in categories['accent']:
+                mapped_colors[var] = self.color_palette['accent']
+                
+        # Mapear cores de texto
+        if categories['text']:
+            for var in categories['text']:
+                if 'dark' in var and 'gray-dark' in self.color_palette:
+                    mapped_colors[var] = self.color_palette['gray-dark']
+                elif 'light' in var and 'gray-light' in self.color_palette:
+                    mapped_colors[var] = self.color_palette['gray-light']
+                elif 'gray-medium' in self.color_palette:
+                    mapped_colors[var] = self.color_palette['gray-medium']
+                    
+        # Mapear cores de fundo
+        if categories['background']:
+            for var in categories['background']:
+                if 'dark' in var:
+                    mapped_colors[var] = self.color_palette.get('gray-dark', '#333333')
+                elif 'light' in var:
+                    mapped_colors[var] = self.color_palette.get('gray-light', '#f5f5f5')
+                else:
+                    mapped_colors[var] = self.color_palette.get('gray-light', '#f5f5f5')
+                    
+        # Para outras variáveis, tente usar cores dominantes restantes
+        remaining_colors = [color for i, color in enumerate(self.dominant_colors) 
+                          if i > 0 and i < 5]  # Use até 4 cores adicionais
+        
+        for i, var in enumerate(categories['other']):
+            if i < len(remaining_colors):
+                mapped_colors[var] = self._rgb_to_hex(remaining_colors[i])
+                
+        return mapped_colors
+        
     def visualize_palette(self):
         """Visualiza a paleta de cores gerada"""
         if not self.color_palette:
@@ -200,10 +353,24 @@ class DesignSystemAdapter:
 
 # Exemplo de uso
 if __name__ == "__main__":
-    adapter = DesignSystemAdapter("logo.png")
-    adapter.extract_dominant_colors(n_colors=6)
+    import argparse
+    
+    # Configurar argumentos de linha de comando
+    parser = argparse.ArgumentParser(description='Design System Auto-Adaptativo - Extrai cores de logotipos e gera/atualiza variáveis de design')
+    parser.add_argument('--logo', type=str, default='logo.png', help='Caminho para o arquivo de imagem do logotipo')
+    parser.add_argument('--colors', type=int, default=6, help='Número de cores dominantes a extrair')
+    parser.add_argument('--output', type=str, default='theme-colors.scss', help='Caminho para o arquivo SCSS de saída')
+    parser.add_argument('--update-scss', type=str, help='Caminho para um arquivo SCSS existente a ser atualizado')
+    parser.add_argument('--updated-output', type=str, help='Caminho para o arquivo SCSS atualizado (opcional)')
+    
+    args = parser.parse_args()
+    
+    # Iniciar o adaptador
+    adapter = DesignSystemAdapter(args.logo)
+    adapter.extract_dominant_colors(n_colors=args.colors)
     adapter.generate_color_palette()
-    adapter.export_scss_file("theme-colors.scss")
+    
+    # Visualizar a paleta
     adapter.visualize_palette()
     
     # Analisar contraste para acessibilidade
@@ -211,3 +378,12 @@ if __name__ == "__main__":
     print("\nAnálise de Contraste para Acessibilidade:")
     for combination, result in contrast_results.items():
         print(f"{combination}: {result['contraste']} - {result['status']}")
+    
+    # Se fornecido um arquivo SCSS existente, atualize-o
+    if args.update_scss:
+        adapter.update_existing_scss(args.update_scss, args.updated_output)
+    else:
+        # Caso contrário, gere um novo arquivo SCSS
+        adapter.export_scss_file(args.output)
+        
+    print("\nProcesso concluído com sucesso!")
